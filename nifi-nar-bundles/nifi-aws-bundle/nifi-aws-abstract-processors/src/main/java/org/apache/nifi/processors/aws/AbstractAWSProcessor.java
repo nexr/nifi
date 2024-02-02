@@ -142,6 +142,13 @@ public abstract class AbstractAWSProcessor<ClientType extends AmazonWebServiceCl
             .addValidator(StandardValidators.TIME_PERIOD_VALIDATOR)
             .build();
 
+    public static final PropertyDescriptor MAX_IDLE_TIME = new PropertyDescriptor.Builder()
+            .name("Connection max idle time")
+            .description("the maximum amount of time that an idle connection may sit in the connection pool and still be eligible for reuse")
+            .required(false)
+            .addValidator(StandardValidators.TIME_PERIOD_VALIDATOR)
+            .build();
+
     public static final PropertyDescriptor SSL_CONTEXT_SERVICE = new PropertyDescriptor.Builder()
             .name("SSL Context Service")
             .description("Specifies an optional SSL Context Service that, if provided, will be used to create connections")
@@ -236,6 +243,9 @@ public abstract class AbstractAWSProcessor<ClientType extends AmazonWebServiceCl
         config.setMaxErrorRetry(0);
         if(getSupportedPropertyDescriptors().contains(TIME_TO_LIVE)) {
             config.setConnectionTTL(context.getProperty(TIME_TO_LIVE).asTimePeriod(TimeUnit.MILLISECONDS));
+        }
+        if(getSupportedPropertyDescriptors().contains(MAX_IDLE_TIME)) {
+            config.setConnectionMaxIdleMillis(context.getProperty(MAX_IDLE_TIME).asTimePeriod(TimeUnit.MILLISECONDS));
         }
         config.setUserAgent(DEFAULT_USER_AGENT);
         // If this is changed to be a property, ensure other uses are also changed
