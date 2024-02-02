@@ -236,6 +236,8 @@ public class ListS3 extends AbstractS3Processor implements VerifiableProcessor {
         CREDENTIALS_FILE,
         AWS_CREDENTIALS_PROVIDER_SERVICE,
         TIMEOUT,
+        TIME_TO_LIVE,
+        MAX_IDLE_TIME,
         SSL_CONTEXT_SERVICE,
         ENDPOINT_OVERRIDE,
         SIGNER_OVERRIDE,
