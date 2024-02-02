@@ -135,6 +135,13 @@ public abstract class AbstractAWSProcessor<ClientType extends AmazonWebServiceCl
             .defaultValue("30 secs")
             .build();
 
+    public static final PropertyDescriptor TIME_TO_LIVE = new PropertyDescriptor.Builder()
+            .name("Connection Time to live")
+            .description("Specifies an optional connection TTL that, if provided, will be used to create connections")
+            .required(false)
+            .addValidator(StandardValidators.TIME_PERIOD_VALIDATOR)
+            .build();
+
     public static final PropertyDescriptor SSL_CONTEXT_SERVICE = new PropertyDescriptor.Builder()
             .name("SSL Context Service")
             .description("Specifies an optional SSL Context Service that, if provided, will be used to create connections")
@@ -227,6 +234,9 @@ public abstract class AbstractAWSProcessor<ClientType extends AmazonWebServiceCl
         final ClientConfiguration config = new ClientConfiguration();
         config.setMaxConnections(maxConcurrentTasks);
         config.setMaxErrorRetry(0);
+        if(getSupportedPropertyDescriptors().contains(TIME_TO_LIVE)) {
+            config.setConnectionTTL(context.getProperty(TIME_TO_LIVE).asTimePeriod(TimeUnit.MILLISECONDS));
+        }
         config.setUserAgent(DEFAULT_USER_AGENT);
         // If this is changed to be a property, ensure other uses are also changed
         config.setProtocol(DEFAULT_PROTOCOL);
