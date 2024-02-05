@@ -241,10 +241,10 @@ public abstract class AbstractAWSProcessor<ClientType extends AmazonWebServiceCl
         final ClientConfiguration config = new ClientConfiguration();
         config.setMaxConnections(maxConcurrentTasks);
         config.setMaxErrorRetry(0);
-        if(getSupportedPropertyDescriptors().contains(TIME_TO_LIVE)) {
+        if(context.getProperty(TIME_TO_LIVE).isSet()) {
             config.setConnectionTTL(context.getProperty(TIME_TO_LIVE).asTimePeriod(TimeUnit.MILLISECONDS));
         }
-        if(getSupportedPropertyDescriptors().contains(MAX_IDLE_TIME)) {
+        if(context.getProperty(MAX_IDLE_TIME).isSet()) {
             config.setConnectionMaxIdleMillis(context.getProperty(MAX_IDLE_TIME).asTimePeriod(TimeUnit.MILLISECONDS));
         }
         config.setUserAgent(DEFAULT_USER_AGENT);
