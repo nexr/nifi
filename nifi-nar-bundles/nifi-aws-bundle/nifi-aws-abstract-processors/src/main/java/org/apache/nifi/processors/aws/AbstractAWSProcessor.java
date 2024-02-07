@@ -27,6 +27,7 @@ import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.http.conn.ssl.SdkTLSSocketFactory;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.retry.RetryMode;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -135,6 +136,42 @@ public abstract class AbstractAWSProcessor<ClientType extends AmazonWebServiceCl
             .defaultValue("30 secs")
             .build();
 
+    public static final PropertyDescriptor MAX_RETRY = new PropertyDescriptor.Builder()
+            .name("Max Retry")
+            .required(false)
+            .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
+            .build();
+
+    public static final AllowableValue RETRY_MODE_ADAPTIVE
+            = new AllowableValue("ADAPTIVE", "ADAPTIVE", "Adaptive retry mode dynamically limits the rate of AWS requests to maximize success rate.");
+
+    public static final AllowableValue RETRY_MODE_LEGACY
+            = new AllowableValue("LEGACY", "LEGACY", "The legacy mode that only enables throttled retry for transient errors");
+
+    public static final AllowableValue RETRY_MODE_STANDARD
+            = new AllowableValue("STANDARD", "STANDARD", "Standard mode is built on top of legacy mode and has throttled retry enabled for throttling errors apart from transient errors.");
+
+    public static final PropertyDescriptor RETRY_MODE = new PropertyDescriptor.Builder()
+            .name("Retry Mode")
+            .description("Retry behavior includes settings regarding how the SDKs attempt to recover from failures resulting from requests made to AWS services.")
+            .required(false)
+            .allowableValues(RETRY_MODE_ADAPTIVE, RETRY_MODE_LEGACY, RETRY_MODE_STANDARD)
+            .defaultValue(RETRY_MODE_STANDARD.getValue())
+            .build();
+
+    public static final PropertyDescriptor THROTTLE_RETRIES = new PropertyDescriptor.Builder()
+            .name("Use Throttle Retries")
+            .description("Retry throttling is a feature which intelligently throttles retry attempts when a large percentage of requests are failing and retries are unsuccessful, particularly in scenarios of degraded service health. " +
+                    "In these situations the client will drain its internal retry capacity and slowly roll off from retry attempts until requests begin to succeed again. " +
+                    "At that point the retry capacity pool will begin to refill and retries will once again be permitted. " +
+                    "In situations where retries have been throttled this feature will effectively result in fail-fast behavior from the client. " +
+                    "Because retries are circumvented exceptions will be immediately returned to the caller if the initial request is unsuccessful. " +
+                    "This will result in a greater number of exceptions being returned up front but prevents requests being tied up attempting subsequent retries which are also likely to fail.")
+            .required(false)
+            .allowableValues("false", "true")
+            .defaultValue("false")
+            .build();
+
     public static final PropertyDescriptor TIME_TO_LIVE = new PropertyDescriptor.Builder()
             .name("Connection Time to live")
             .description("Specifies an optional connection TTL that, if provided, will be used to create connections")
@@ -240,7 +277,13 @@ public abstract class AbstractAWSProcessor<ClientType extends AmazonWebServiceCl
     protected ClientConfiguration createConfiguration(final PropertyContext context, final int maxConcurrentTasks) {
         final ClientConfiguration config = new ClientConfiguration();
         config.setMaxConnections(maxConcurrentTasks);
-        config.setMaxErrorRetry(0);
+        if(context.getProperty(MAX_RETRY).isSet()) {
+            config.setMaxErrorRetry(context.getProperty(MAX_RETRY).asInteger());
+            config.setRetryMode(RetryMode.fromName(context.getProperty(RETRY_MODE).getValue()));
+            config.setUseThrottleRetries(context.getProperty(THROTTLE_RETRIES).asBoolean());
+        } else {
+            config.setMaxErrorRetry(0);
+        }
         if(context.getProperty(TIME_TO_LIVE).isSet()) {
             config.setConnectionTTL(context.getProperty(TIME_TO_LIVE).asTimePeriod(TimeUnit.MILLISECONDS));
         }
